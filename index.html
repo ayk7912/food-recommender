@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>グルメ動画レコメンダー</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .question-container {
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #c0392b;
+        }
+        
+        #results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .video-recommendation {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .video-recommendation h3 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        
+        .video-thumbnail {
+            width: 100%;
+            height: 200px;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        
+        .ad-container {
+            margin: 30px 0;
+            text-align: center;
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>グルメ動画レコメンダー</h1>
+    
+    <div class="container">
+        <div class="question-container">
+            <h2>どんな気分ですか？</h2>
+            <select id="mood">
+                <option value="">選択してください</option>
+                <option value="happy">嬉しい・幸せ</option>
+                <option value="sad">落ち込んでいる</option>
+                <option value="tired">疲れている</option>
+                <option value="stressed">ストレスがたまっている</option>
+                <option value="energetic">元気いっぱい</option>
+                <option value="hungry">とにかくお腹が空いている</option>
+            </select>
+            
+            <h2>どんな食べ物が好きですか？</h2>
+            <select id="preference">
+                <option value="">選択してください</option>
+                <option value="japanese">和食</option>
+                <option value="chinese">中華</option>
+                <option value="western">洋食</option>
+                <option value="spicy">辛い料理</option>
+                <option value="sweet">甘い料理・デザート</option>
+                <option value="healthy">ヘルシーな料理</option>
+            </select>
+            
+            <h2>お住まいの地域は？（任意）</h2>
+            <input type="text" id="location" placeholder="例：東京、大阪、福岡など">
+        </div>
+        
+        <!-- 広告スペース -->
+        <div class="ad-container">
+            <!-- ここにGoogle AdSenseコードを入れます -->
+            <p>[広告枠 - ここにAdSenseコードが入ります]</p>
+        </div>
+        
+        <button id="recommend">おすすめ動画を見る</button>
+        
+        <div id="results">
+            <h2>あなたにおすすめの料理動画</h2>
+            <div id="recommendations"></div>
+        </div>
+    </div>
+
+    <script>
+        // 食べ物と動画の推薦データベース
+        const videoDatabase = {
+            happy: {
+                japanese: [
+                    { title: "超簡単！笑顔になれる絶品親子丼の作り方", thumbnail: "/api/placeholder/400/320", description: "忙しい日でも10分で作れる親子丼レシピ" },
+                    { title: "祝い事に！華やか海鮮ちらし寿司", thumbnail: "/api/placeholder/400/320", description: "特別な日に作りたい彩り豊かなちらし寿司" }
+                ],
+                chinese: [
+                    { title: "本格餃子の包み方と焼き方", thumbnail: "/api/placeholder/400/320", description: "パリパリジューシーな餃子の作り方" },
+                    { title: "みんな笑顔！特製チャーハンの秘密", thumbnail: "/api/placeholder/400/320", description: "プロ直伝のチャーハンテクニック" }
+                ],
+                western: [
+                    { title: "週末のごほうび！絶品ビーフステーキ", thumbnail: "/api/placeholder/400/320", description: "レストラン級のステーキを自宅で" },
+                    { title: "ワインに合う！簡単オードブル盛り合わせ", thumbnail: "/api/placeholder/400/320", description: "パーティーにぴったりの前菜レシピ" }
+                ],
+                spicy: [
+                    { title: "汗をかく！スパイシータコス", thumbnail: "/api/placeholder/400/320", description: "メキシカン風ピリ辛タコスでテンションアップ" }
+                ],
+                sweet: [
+                    { title: "気分上がる！カラフルマカロンの作り方", thumbnail: "/api/placeholder/400/320", description: "見た目も可愛いマカロンでハッピーに" }
+                ],
+                healthy: [
+                    { title: "元気の源！彩りサラダボウルレシピ", thumbnail: "/api/placeholder/400/320", description: "栄養満点でテンションも上がるサラダボウル" }
+                ]
+            },
+            sad: {
+                japanese: [
+                    { title: "心温まる！具だくさん味噌汁", thumbnail: "/api/placeholder/400/320", description: "実家の味を思い出す優しい味わい" },
+                    { title: "疲れた日の鍋焼きうどん", thumbnail: "/api/placeholder/400/320", description: "ほっとする和風の味わい" }
+                ],
+                chinese: [
+                    { title: "体が温まる！本格麻婆豆腐", thumbnail: "/api/placeholder/400/320", description: "寒い日にぴったりの麻婆豆腐" }
+                ],
+                western: [
+                    { title: "ほっこり♪ クリームシチュー", thumbnail: "/api/placeholder/400/320", description: "心も体も温まる優しい味のシチュー" },
+                    { title: "雨の日にぴったり！ビーフシチュー", thumbnail: "/api/placeholder/400/320", description: "じっくり煮込んだ本格シチュー" }
+                ],
+                spicy: [
+                    { title: "気分転換！ピリ辛キムチ鍋", thumbnail: "/api/placeholder/400/320", description: "辛さで気持ちをリセット" }
+                ],
+                sweet: [
+                    { title: "癒しのチョコレートクッキー", thumbnail: "/api/placeholder/400/320", description: "手作りクッキーでほっと一息" },
+                    { title: "心を温める！ホットチョコレートレシピ", thumbnail: "/api/placeholder/400/320", description: "寒い日にぴったりのドリンク" }
+                ],
+                healthy: [
+                    { title: "体に優しい根菜スープ", thumbnail: "/api/placeholder/400/320", description: "体の中から温まる健康スープ" }
+                ]
+            },
+            tired: {
+                japanese: [
+                    { title: "疲労回復！さばの味噌煮", thumbnail: "/api/placeholder/400/320", description: "DHA豊富なさばでエネルギーチャージ" },
+                    { title: "簡単！炊き込みご飯", thumbnail: "/api/placeholder/400/320", description: "楽して作れる栄養満点の一品" }
+                ],
+                chinese: [
+                    { title: "スタミナ回復！ニラレバ炒め", thumbnail: "/api/placeholder/400/320", description: "鉄分豊富な食材で元気に" }
+                ],
+                western: [
+                    { title: "簡単パスタ！ワンポットスパゲッティ", thumbnail: "/api/placeholder/400/320", description: "洗い物を減らして楽チン料理" }
+                ],
+                spicy: [
+                    { title: "汗をかいてリフレッシュ！辛口カレー", thumbnail: "/api/placeholder/400/320", description: "スパイスで疲労をふきとばせ" }
+                ],
+                sweet: [
+                    { title: "疲れた時の甘いもの！バナナブレッド", thumbnail: "/api/placeholder/400/320", description: "手軽に作れる癒しのスイーツ" }
+                ],
+                healthy: [
+                    { title: "回復力アップ！スーパーフードサラダ", thumbnail: "/api/placeholder/400/320", description: "栄養素がギュッと詰まったパワーサラダ" },
+                    { title: "疲労回復に！鉄分たっぷりほうれん草と豆腐のスムージー", thumbnail: "/api/placeholder/400/320", description: "飲みやすく栄養補給できるドリンク" }
+                ]
+            },
+            stressed: {
+                japanese: [
+                    { title: "手軽に作れる！鮭の塩焼き定食", thumbnail: "/api/placeholder/400/320", description: "オメガ3脂肪酸でストレス緩和" }
+                ],
+                chinese: [
+                    { title: "気分転換！本格四川料理", thumbnail: "/api/placeholder/400/320", description: "刺激的な味わいで気分一新" }
+                ],
+                western: [
+                    { title: "ストレス解消！アボカドトースト", thumbnail: "/api/placeholder/400/320", description: "良質な脂質で心を落ち着かせる" }
+                ],
+                spicy: [
+                    { title: "ストレス発散！激辛タンタン麺", thumbnail: "/api/placeholder/400/320", description: "辛さで気持ちをリセット" }
+                ],
+                sweet: [
+                    { title: "ほっとひと息♪ チョコレートブラウニー", thumbnail: "/api/placeholder/400/320", description: "幸せホルモンを分泌するチョコレートスイーツ" },
+                    { title: "リラックスタイムに！紅茶のシフォンケーキ", thumbnail: "/api/placeholder/400/320", description: "アロマ効果もある紅茶スイーツ" }
+                ],
+                healthy: [
+                    { title: "心を落ち着かせるグリーンスムージー", thumbnail: "/api/placeholder/400/320", description: "ビタミンB群を含む緑の野菜でリラックス" }
+                ]
+            },
+            energetic: {
+                japanese: [
+                    { title: "朝の活力！具だくさん卵焼き", thumbnail: "/api/placeholder/400/320", description: "タンパク質たっぷりで一日のスタートに" }
+                ],
+                chinese: [
+                    { title: "元気いっぱい！五目炒飯", thumbnail: "/api/placeholder/400/320", description: "野菜たっぷりでバランス良く" }
+                ],
+                western: [
+                    { title: "アクティブに！プロテインパンケーキ", thumbnail: "/api/placeholder/400/320", description: "筋トレ後にもおすすめの高タンパクレシピ" },
+                    { title: "エネルギッシュな朝に！アサイーボウル", thumbnail: "/api/placeholder/400/320", description: "スーパーフードで栄養チャージ" }
+                ],
+                spicy: [
+                    { title: "テンションアップ！ジャマイカン・ジャークチキン", thumbnail: "/api/placeholder/400/320", description: "スパイシーな味わいでさらに活力UP" }
+                ],
+                sweet: [
+                    { title: "エネルギー補給！グラノーラバー", thumbnail: "/api/placeholder/400/320", description: "持ち運びにも便利な手作りエナジーバー" }
+                ],
+                healthy: [
+                    { title: "パワフル！プロテインボウル", thumbnail: "/api/placeholder/400/320", description: "バランスの良い栄養素で体をサポート" },
+                    { title: "活力満点！大豆ミートのヘルシーバーガー", thumbnail: "/api/placeholder/400/320", description: "植物性タンパク質で環境にも優しく" }
+                ]
+            },
+            hungry: {
+                japanese: [
+                    { title: "ガッツリ系！特製牛丼", thumbnail: "/api/placeholder/400/320", description: "お腹いっぱい大満足の牛丼レシピ" },
+                    { title: "ボリューム満点！かつ丼", thumbnail: "/api/placeholder/400/320", description: "食べ応え抜群のかつ丼" }
+                ],
+                chinese: [
+                    { title: "腹ペコに！特大炒飯", thumbnail: "/api/placeholder/400/320", description: "具だくさんでお腹いっぱいになる炒飯" },
+                    { title: "満腹確実！五目焼きそば", thumbnail: "/api/placeholder/400/320", description: "野菜も肉もたっぷり入った焼きそば" }
+                ],
+                western: [
+                    { title: "大食いチャレンジ！1ポンドステーキ", thumbnail: "/api/placeholder/400/320", description: "肉好きにはたまらない特大ステーキ" },
+                    { title: "お腹いっぱい！ジューシーハンバーガー", thumbnail: "/api/placeholder/400/320", description: "ボリューム満点の手作りバーガー" }
+                ],
+                spicy: [
+                    { title: "腹ペコ撃退！辛口キーマカレー", thumbnail: "/api/placeholder/400/320", description: "食欲をそそる香りとスパイス" }
+                ],
+                sweet: [
+                    { title: "超満足！パンケーキタワー", thumbnail: "/api/placeholder/400/320", description: "何枚も重ねた贅沢パンケーキ" }
+                ],
+                healthy: [
+                    { title: "腹持ち抜群！オートミールの食べ方10選", thumbnail: "/api/placeholder/400/320", description: "ヘルシーだけど満足感のある食事" }
+                ]
+            }
+        };
+
+        // 地域別の飲食店動画データベース
+        const locationDatabase = {
+            "東京": [
+                { title: "東京の隠れ家ラーメン店5選", thumbnail: "/api/placeholder/400/320", description: "行列のできない穴場店を紹介" },
+                { title: "銀座のミシュラン星付きレストラン体験", thumbnail: "/api/placeholder/400/320", description: "高級店の味を徹底解説" }
+            ],
+            "大阪": [
+                { title: "大阪たこ焼き食べ歩きガイド", thumbnail: "/api/placeholder/400/320", description: "地元民おすすめの名店を巡る" },
+                { title: "お好み焼き激戦区・梅田のベスト3店", thumbnail: "/api/placeholder/400/320", description: "素材にこだわる名店を紹介" }
+            ],
+            "福岡": [
+                { title: "博多ラーメン徹底食べ比べ", thumbnail: "/api/placeholder/400/320", description: "とんこつスープの違いを解説" },
+                { title: "屋台の達人と行く！長浜市場ツアー", thumbnail: "/api/placeholder/400/320", description: "新鮮な海鮮を味わい尽くす" }
+            ],
+            "札幌": [
+                { title: "札幌ラーメン激戦区マップ", thumbnail: "/api/placeholder/400/320", description: "味噌ラーメンの名店を巡る" },
+                { title: "ジンギスカン食べ歩きガイド", thumbnail: "/api/placeholder/400/320", description: "地元民に愛される老舗を紹介" }
+            ],
+            "沖縄": [
+                { title: "那覇市の穴場沖縄料理店", thumbnail: "/api/placeholder/400/320", description: "観光客が知らない地元の味" },
+                { title: "沖縄そば名店めぐり", thumbnail: "/api/placeholder/400/320", description: "各店の特徴と食べ比べポイント" }
+            ]
+        };
+
+        // おすすめ動画を表示する関数
+        document.getElementById('recommend').addEventListener('click', function() {
+            const mood = document.getElementById('mood').value;
+            const preference = document.getElementById('preference').value;
+            const location = document.getElementById('location').value;
+            
+            if (!mood || !preference) {
+                alert('気分と好みを選択してください');
+                return;
+            }
+            
+            const recommendationsDiv = document.getElementById('recommendations');
+            recommendationsDiv.innerHTML = '';
+            
+            // 気分と好みに基づいた推薦
+            if (videoDatabase[mood] && videoDatabase[mood][preference]) {
+                videoDatabase[mood][preference].forEach(video => {
+                    const videoElement = createVideoElement(video);
+                    recommendationsDiv.appendChild(videoElement);
+                });
+            } else {
+                const noMatchElement = document.createElement('p');
+                noMatchElement.textContent = '申し訳ありません、条件に合う動画が見つかりませんでした。';
+                recommendationsDiv.appendChild(noMatchElement);
+            }
+            
+            // 地域に基づいた推薦（入力があれば）
+            if (location) {
+                // 部分一致で地域を検索
+                const matchedLocation = Object.keys(locationDatabase).find(loc => 
+                    location.includes(loc) || loc.includes(location)
+                );
+                
+                if (matchedLocation && locationDatabase[matchedLocation]) {
+                    const locationHeader = document.createElement('h2');
+                    locationHeader.textContent = `${matchedLocation}のおすすめ飲食店`;
+                    recommendationsDiv.appendChild(locationHeader);
+                    
+                    locationDatabase[matchedLocation].forEach(video => {
+                        const videoElement = createVideoElement(video);
+                        recommendationsDiv.appendChild(videoElement);
+                    });
+                }
+            }
+            
+            // 結果を表示
+            document.getElementById('results').style.display = 'block';
+        });
+
+        // 動画要素を作成する関数
+        function createVideoElement(video) {
+            const videoDiv = document.createElement('div');
+            videoDiv.className = 'video-recommendation';
+            
+            const title = document.createElement('h3');
+            title.textContent = video.title;
+            
+            const thumbnail = document.createElement('div');
+            thumbnail.className = 'video-thumbnail';
+            const img = document.createElement('img');
+            img.src = video.thumbnail;
+            img.alt = video.title;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            thumbnail.appendChild(img);
+            
+            const description = document.createElement('p');
+            description.textContent = video.description;
+            
+            videoDiv.appendChild(title);
+            videoDiv.appendChild(thumbnail);
+            videoDiv.appendChild(description);
+            
+            return videoDiv;
+        }
+    </script>
+</body>
+</html>
